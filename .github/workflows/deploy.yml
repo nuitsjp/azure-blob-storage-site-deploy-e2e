@@ -95,6 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          site_url="${{ steps.deploy.outputs.site_url }}"
           {
             echo "## 配置先URL"
             echo
@@ -103,7 +104,7 @@ jobs:
             if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
               echo "- PR: #${{ github.event.pull_request.number }}"
             fi
-            echo "- URL: ${{ steps.deploy.outputs.site_url }}"
+            echo "- URL: [${site_url}](${site_url})"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: PRコメントにステージングURLを投稿
@@ -114,11 +115,14 @@ jobs:
         run: |
           set -euo pipefail
           pr_number="${{ github.event.pull_request.number }}"
+          site_url="${{ steps.deploy.outputs.site_url }}"
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           comment_body="$(
-            printf '%s\n\n- ステージングURL: %s\n- Workflow Run: %s\n' \
+            printf '%s\n\n- ステージングURL: [%s](%s)\n- Workflow Run: [%s](%s)\n' \
               'デプロイが完了しました。' \
-              '${{ steps.deploy.outputs.site_url }}' \
+              "${site_url}" \
+              "${site_url}" \
+              "${run_url}" \
               "${run_url}"
           )"
 
