@@ -52,17 +52,22 @@ jobs:
         shell: bash
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
         run: |
           set -euo pipefail
           if [[ -z "${AZURE_RESOURCE_GROUP}" ]]; then
             echo "AZURE_RESOURCE_GROUP variable が未設定です" >&2
             exit 1
           fi
+          if [[ -z "${AZURE_STORAGE_ACCOUNT}" ]]; then
+            echo "AZURE_STORAGE_ACCOUNT variable が未設定です" >&2
+            exit 1
+          fi
 
           endpoint="$(
             az storage account show \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --name "${{ secrets.AZURE_STORAGE_ACCOUNT }}" \
+              --name "${AZURE_STORAGE_ACCOUNT}" \
               --query primaryEndpoints.web \
               --output tsv
           )"
@@ -79,7 +84,7 @@ jobs:
         id: deploy
         uses: nuitsjp/azure-blob-storage-site-deploy@main
         with:
-          storage_account: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
           source_dir: docs
           target_prefix: ${{ steps.target.outputs.prefix }}
           static_website_endpoint: ${{ steps.website.outputs.endpoint }}
@@ -140,6 +145,6 @@ jobs:
       - name: クリーンアップ
         uses: nuitsjp/azure-blob-storage-site-deploy@main
         with:
-          storage_account: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
           target_prefix: pr-${{ github.event.pull_request.number }}
           action: cleanup
