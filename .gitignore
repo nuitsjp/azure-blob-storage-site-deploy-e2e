@@ -1,0 +1,7 @@
+# 一時ファイル
+*.tmp
+*.swp
+*~
+
+# macOS
+.DS_Store
