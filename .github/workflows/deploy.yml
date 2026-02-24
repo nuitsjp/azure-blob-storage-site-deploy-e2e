@@ -86,6 +86,7 @@ jobs:
         with:
           storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
           source_dir: docs
+          site_name: e2e-test
           target_prefix: ${{ steps.target.outputs.prefix }}
           static_website_endpoint: ${{ steps.website.outputs.endpoint }}
           action: deploy
@@ -150,5 +151,6 @@ jobs:
         uses: nuitsjp/azure-blob-storage-site-deploy@main
         with:
           storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          site_name: e2e-test
           target_prefix: pr-${{ github.event.pull_request.number }}
           action: cleanup

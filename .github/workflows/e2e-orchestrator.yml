@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
 
           BASE_URL="https://${STORAGE_ACCOUNT}.z11.web.core.windows.net"
+          SITE_NAME="e2e-test"
           TEST_BRANCH="e2e-orch-${RUN_ID}-${RUN_ATTEMPT}"
           RUN_TAG="e2e-${RUN_ID}-${RUN_ATTEMPT}"
 
@@ -181,7 +182,7 @@ jobs:
 
             wait_deploy_workflow "push" "$main_sha" "$marker_ts" "main push"
             ./e2e/verify.sh \
-              "${BASE_URL}/main/" \
+              "${BASE_URL}/${SITE_NAME}/main/" \
               200 \
               --require-trailing-slash \
               --contains "$main_marker" \
@@ -225,14 +226,14 @@ jobs:
 
             wait_deploy_workflow "pull_request" "$PR_HEAD_SHA" "$pr_created_at" "PR open"
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/" \
               200 \
               --require-trailing-slash \
               --contains "$pr_open_marker" \
               --retries 20 \
               --interval 5
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/obsolete.txt" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/obsolete.txt" \
               200 \
               --contains "obsolete-${RUN_TAG}" \
               --retries 20 \
@@ -262,20 +263,20 @@ jobs:
 
             wait_deploy_workflow "pull_request" "$PR_HEAD_SHA" "$pr_updated_at" "PR update"
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/" \
               200 \
               --require-trailing-slash \
               --contains "$pr_updated_marker" \
               --retries 20 \
               --interval 5
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/fresh.txt" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/fresh.txt" \
               200 \
               --contains "fresh-${RUN_TAG}" \
               --retries 20 \
               --interval 5
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/obsolete.txt" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/obsolete.txt" \
               404 \
               --retries 20 \
               --interval 5
@@ -286,7 +287,7 @@ jobs:
 
             wait_deploy_workflow "pull_request" "$PR_HEAD_SHA" "$pr_closed_at" "PR close"
             ./e2e/verify.sh \
-              "${BASE_URL}/pr-${PR_NUMBER}/" \
+              "${BASE_URL}/${SITE_NAME}/pr-${PR_NUMBER}/" \
               404 \
               --require-trailing-slash \
               --retries 20 \
