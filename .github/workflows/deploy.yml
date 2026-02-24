@@ -36,17 +36,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: プレフィックスを決定
-        id: target
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            echo "prefix=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "prefix=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: 静的Webサイトのエンドポイントを取得
         id: website
         shell: bash
@@ -86,7 +75,9 @@ jobs:
         with:
           storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
           source_dir: docs
-          target_prefix: ${{ steps.target.outputs.prefix }}
+          site_name: e2e-test
+          branch_name: ${{ github.head_ref || github.ref_name }}
+          pull_request_number: ${{ github.event.pull_request.number }}
           static_website_endpoint: ${{ steps.website.outputs.endpoint }}
           action: deploy
 
@@ -100,7 +91,7 @@ jobs:
             echo "## 配置先URL"
             echo
             echo "- event: \`${GITHUB_EVENT_NAME}\`"
-            echo "- prefix: \`${{ steps.target.outputs.prefix }}\`"
+            echo "- branch: \`${{ github.head_ref || github.ref_name }}\`"
             if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
               echo "- PR: #${{ github.event.pull_request.number }}"
             fi
@@ -150,5 +141,6 @@ jobs:
         uses: nuitsjp/azure-blob-storage-site-deploy@main
         with:
           storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-          target_prefix: pr-${{ github.event.pull_request.number }}
+          site_name: e2e-test
+          pull_request_number: ${{ github.event.pull_request.number }}
           action: cleanup
