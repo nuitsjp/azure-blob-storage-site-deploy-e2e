@@ -36,39 +36,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: 静的Webサイトのエンドポイントを取得
-        id: website
-        shell: bash
-        env:
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${AZURE_RESOURCE_GROUP}" ]]; then
-            echo "AZURE_RESOURCE_GROUP variable が未設定です" >&2
-            exit 1
-          fi
-          if [[ -z "${AZURE_STORAGE_ACCOUNT}" ]]; then
-            echo "AZURE_STORAGE_ACCOUNT variable が未設定です" >&2
-            exit 1
-          fi
-
-          endpoint="$(
-            az storage account show \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --name "${AZURE_STORAGE_ACCOUNT}" \
-              --query primaryEndpoints.web \
-              --output tsv
-          )"
-          endpoint="${endpoint%/}"
-
-          if [[ -z "${endpoint}" ]]; then
-            echo "静的Webサイトのエンドポイント取得に失敗しました" >&2
-            exit 1
-          fi
-
-          echo "endpoint=${endpoint}" >> "$GITHUB_OUTPUT"
-
       - name: デプロイ
         id: deploy
         uses: nuitsjp/azure-blob-storage-site-deploy@main
@@ -78,7 +45,6 @@ jobs:
           site_name: e2e-test
           branch_name: ${{ github.head_ref || github.ref_name }}
           pull_request_number: ${{ github.event.pull_request.number }}
-          static_website_endpoint: ${{ steps.website.outputs.endpoint }}
           action: deploy
 
       - name: Workflow Summary にアクセスURLを出力
