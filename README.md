@@ -1,5 +1,7 @@
+> [日本語版](README.ja.md)
+
 # azure-blob-storage-site-deploy-e2e
 
-> **開発者向け**: セットアップ・テスト実行・開発ワークフローについては [devリポジトリ](https://github.com/nuitsjp/azure-blob-storage-site-deploy-dev) を参照してください。
+> **For developers**: See the [dev repository](https://github.com/nuitsjp/azure-blob-storage-site-deploy-dev) for setup, test execution, and development workflow details.
 
-[azure-blob-storage-site-deploy](https://github.com/nuitsjp/azure-blob-storage-site-deploy) のE2Eテスト用リポジトリです。
+An E2E test repository for [azure-blob-storage-site-deploy](https://github.com/nuitsjp/azure-blob-storage-site-deploy).
