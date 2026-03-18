@@ -99,6 +99,7 @@ jobs:
       github.event.release.prerelease == false &&
       github.event.release.draft == false
     runs-on: ubuntu-latest
+    environment: production
     concurrency:
       group: deploy-release-latest
       cancel-in-progress: true
