@@ -10,6 +10,9 @@ name: deploy
       - synchronize
       - reopened
       - closed
+  release:
+    types:
+      - published
 
 permissions:
   contents: read
@@ -19,7 +22,9 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
@@ -87,6 +92,53 @@ jobs:
             "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/comments" \
             --method POST \
             --raw-field "body=${comment_body}" >/dev/null
+
+  deploy-release-latest:
+    if: >-
+      github.event_name == 'release' &&
+      github.event.release.prerelease == false &&
+      github.event.release.draft == false
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-release-latest
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Azure にログイン
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: デプロイ（release-latest）
+        id: deploy
+        uses: nuitsjp/azure-blob-storage-site-deploy@main
+        with:
+          storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          source_dir: docs
+          site_name: e2e-test
+          is_latest_release: 'true'
+          action: deploy
+
+      - name: Workflow Summary にアクセスURLを出力
+        if: ${{ success() && steps.deploy.outputs.site_url != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          site_url="${{ steps.deploy.outputs.site_url }}"
+          {
+            echo "## 配置先URL（release-latest）"
+            echo
+            echo "- event: \`${GITHUB_EVENT_NAME}\`"
+            echo "- tag: \`${{ github.event.release.tag_name }}\`"
+            echo "- URL: [${site_url}](${site_url})"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
