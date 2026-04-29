@@ -4,7 +4,7 @@ name: deploy
   push:
     branches:
       - main
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - synchronize
@@ -23,16 +23,25 @@ permissions:
 jobs:
   deploy:
     if: >-
-      (github.event_name == 'push' || github.event_name == 'pull_request') &&
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
+      (github.event_name == 'push' || github.event_name == 'pull_request_target') &&
+      (github.event_name != 'pull_request_target' || github.event.action != 'closed')
     runs-on: ubuntu-latest
     concurrency:
-      group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+      group: deploy-${{ github.event_name == 'pull_request_target' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
       cancel-in-progress: true
 
     steps:
-      - name: Checkout
+      - name: Checkout (base = 信頼境界)
         uses: actions/checkout@v4
+
+      - name: Checkout fork docs（fork PR 時のみ、コードは実行しない）
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: __fork__
+          persist-credentials: false
 
       - name: Azure にログイン
         uses: azure/login@v2
@@ -41,14 +50,25 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: source_dir を決定
+        id: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
+            echo "dir=__fork__/docs" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=docs" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: デプロイ
         id: deploy
         uses: nuitsjp/azure-blob-storage-site-deploy@main
         with:
           storage_account: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-          source_dir: docs
+          source_dir: ${{ steps.src.outputs.dir }}
           site_name: e2e-test
-          branch_name: ${{ github.head_ref || github.ref_name }}
+          branch_name: ${{ github.event.pull_request.head.ref || github.ref_name }}
           pull_request_number: ${{ github.event.pull_request.number }}
           action: deploy
 
@@ -62,15 +82,16 @@ jobs:
             echo "## 配置先URL"
             echo
             echo "- event: \`${GITHUB_EVENT_NAME}\`"
-            echo "- branch: \`${{ github.head_ref || github.ref_name }}\`"
-            if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            echo "- branch: \`${{ github.event.pull_request.head.ref || github.ref_name }}\`"
+            if [[ "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
               echo "- PR: #${{ github.event.pull_request.number }}"
+              echo "- fork: \`${{ github.event.pull_request.head.repo.full_name }}\`"
             fi
             echo "- URL: [${site_url}](${site_url})"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: PRコメントにステージングURLを投稿
-        if: ${{ success() && github.event_name == 'pull_request' && steps.deploy.outputs.site_url != '' }}
+        if: ${{ success() && github.event_name == 'pull_request_target' && steps.deploy.outputs.site_url != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -142,7 +163,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   cleanup:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-pr-${{ github.event.pull_request.number }}
